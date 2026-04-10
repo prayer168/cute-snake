@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Q版貪吃蛇｜角色動畫豪華版</title>
+<style>
+  :root{
+    --bg1:#ffeef6;
+    --bg2:#e8f7ff;
+    --panel:#ffffffcc;
+    --accent:#ff7aa8;
+    --accent2:#7ccfff;
+    --text:#50394c;
+    --shadow:0 10px 30px rgba(0,0,0,.12);
+  }
+  *{box-sizing:border-box}
+  html,body{
+    margin:0;padding:0;
+    font-family:"Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    background:
+      radial-gradient(circle at 20% 20%, #fff9c9 0 8%, transparent 8.5%),
+      radial-gradient(circle at 78% 18%, #ffd6ea 0 7%, transparent 7.5%),
+      radial-gradient(circle at 80% 78%, #c7f0ff 0 9%, transparent 9.5%),
+      linear-gradient(135deg,var(--bg1),var(--bg2));
+    min-height:100vh;
+    color:var(--text);
+    overflow-x:hidden;
+  }
+  .wrap{
+    width:min(1180px, 96vw);
+    margin:14px auto;
+    display:grid;
+    grid-template-columns: 280px minmax(0,1fr);
+    gap:14px;
+    align-items:start;
+  }
+  .panel{
+    background:var(--panel);
+    backdrop-filter: blur(8px);
+    border:1px solid rgba(255,255,255,.6);
+    border-radius:24px;
+    box-shadow:var(--shadow);
+  }
+  .sidebar{
+    padding:16px;
+    position:sticky;
+    top:14px;
+  }
+  h1{
+    margin:0 0 6px;
+    font-size:1.55rem;
+  }
+  .sub{
+    font-size:.94rem;
+    opacity:.85;
+    margin-bottom:12px;
+  }
+  .badge{
+    display:inline-block;
+    padding:6px 10px;
+    border-radius:999px;
+    background:#fff;
+    margin:4px 6px 0 0;
+    font-size:.85rem;
+    box-shadow:0 2px 10px rgba(0,0,0,.06);
+  }
+  .stats{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+    margin:14px 0;
+  }
+  .stat{
+    background:#fff;
+    border-radius:18px;
+    padding:12px 10px;
+    text-align:center;
+    box-shadow:0 4px 14px rgba(0,0,0,.05);
+  }
+  .stat .label{font-size:.85rem; opacity:.75}
+  .stat .value{font-size:1.5rem; font-weight:800; margin-top:6px}
+  .controls{
+    display:grid;
+    gap:10px;
+  }
+  .btn,.char-card,.mini-btn{
+    border:none;
+    border-radius:18px;
+    padding:12px 14px;
+    background:#fff;
+    color:var(--text);
+    cursor:pointer;
+    font-weight:700;
+    box-shadow:0 5px 18px rgba(0,0,0,.08);
+    transition:transform .12s ease, box-shadow .12s ease, background .12s ease;
+    user-select:none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn:hover,.char-card:hover,.mini-btn:hover{transform:translateY(-1px)}
+  .btn:active,.char-card:active,.mini-btn:active{transform:translateY(1px)}
+  .btn.primary{
+    background:linear-gradient(135deg, var(--accent), #ff98b2);
+    color:#fff;
+  }
+  .btn.secondary{
+    background:linear-gradient(135deg, var(--accent2), #96d9ff);
+    color:#fff;
+  }
+  .game-panel{
+    padding:14px;
+    position:relative;
+  }
+  .topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin-bottom:10px;
+    flex-wrap:wrap;
+  }
+  .canvas-shell{
+    position:relative;
+    width:100%;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    min-height:660px;
+  }
+  canvas{
+    width:90%;
+    max-width:720px;
+    aspect-ratio:1/1;
+    display:block;
+    background:linear-gradient(180deg,#fffefb,#fff7fa);
+    border-radius:28px;
+    box-shadow: inset 0 0 0 4px rgba(255,255,255,.7), 0 10px 30px rgba(0,0,0,.12);
+    position:relative;
+    z-index:1;
+  }
+  .overlay{
+    position:absolute;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:3;
+    pointer-events:none;
+  }
+  .screen{
+    width:min(640px, 92%);
+    background:rgba(255,255,255,.92);
+    border-radius:28px;
+    box-shadow:var(--shadow);
+    padding:22px;
+    text-align:center;
+    pointer-events:auto;
+    border:1px solid rgba(255,255,255,.8);
+  }
+  .screen h2{
+    margin:0 0 8px;
+    font-size:2rem;
+  }
+  .screen p{
+    margin:6px 0 0;
+    line-height:1.7;
+  }
+  .chars{
+    margin:18px 0 14px;
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:10px;
+  }
+  .char-card{
+    text-align:left;
+    padding:12px;
+    display:flex;
+    gap:10px;
+    align-items:center;
+    background:#fff;
+  }
+  .char-card.active{
+    outline:3px solid #ffb6d0;
+    background:#fff4f8;
+  }
+  .char-emoji{
+    width:52px;height:52px;border-radius:16px;
+    display:grid;place-items:center;
+    font-size:30px;
+    background:linear-gradient(135deg,#fff,#ffe8f1);
+  }
+  .char-text b{display:block;font-size:1rem}
+  .char-text span{font-size:.86rem;opacity:.78}
+  .start-actions{
+    display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:14px;
+  }
+  .mobile-pad{
+    display:none;
+    margin-top:14px;
+    justify-content:center;
+    gap:10px;
+    user-select:none;
+  }
+  .pad-grid{
+    display:grid;
+    grid-template-columns:repeat(3,68px);
+    grid-template-rows:repeat(2,58px);
+    gap:8px;
+  }
+  .mini-btn{
+    font-size:24px;
+    padding:0;
+    display:grid;
+    place-items:center;
+    touch-action:manipulation;
+  }
+  .mini-btn.empty{visibility:hidden}
+  .footer-tip{
+    margin-top:12px;
+    font-size:.9rem;
+    opacity:.75;
+    line-height:1.6;
+  }
+  .pill{
+    display:inline-block;
+    margin:0 4px;
+    padding:5px 10px;
+    border-radius:999px;
+    background:#fff;
+    box-shadow:0 3px 10px rgba(0,0,0,.05);
+  }
+  @media (max-width: 920px){
+    .wrap{grid-template-columns:1fr}
+    .sidebar{position:relative; top:auto}
+    .canvas-shell{min-height:560px}
+    .mobile-pad{display:flex}
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <aside class="panel sidebar">
+      <h1>🐍 Q版貪吃蛇</h1>
+      <div class="sub">角色動畫豪華版｜可直接部署 GitHub Pages</div>
+      <div>
+        <span class="badge">🎵 背景音樂</span>
+        <span class="badge">🎀 角色選擇</span>
+        <span class="badge">✨ 開場畫面</span>
+      </div>
+
+      <div class="stats">
+        <div class="stat">
+          <div class="label">目前分數</div>
+          <div class="value" id="score">0</div>
+        </div>
+        <div class="stat">
+          <div class="label">最高分</div>
+          <div class="value" id="best">0</div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button class="btn primary" id="startBtn">開始遊戲</button>
+        <button class="btn secondary" id="musicBtn">音樂：開</button>
+        <button class="btn" id="themeBtn">背景：糖果夢境</button>
+        <button class="btn" id="pauseBtn">暫停 / 繼續</button>
+        <button class="btn" id="restartBtn">重新開始</button>
+      </div>
+
+      <div class="footer-tip">
+        操作方式：<span class="pill">方向鍵</span><span class="pill">WASD</span><br>
+        手機也可用下方按鈕操作。<br>
+        音樂需在你按下「開始遊戲」後才會啟動。
+      </div>
+    </aside>
+
+    <main class="panel game-panel">
+      <div class="topbar">
+        <div><strong>目前角色：</strong><span id="currentChar">小兔蛇</span></div>
+        <div><strong>模式：</strong>可愛角色主題版</div>
+      </div>
+
+      <div class="canvas-shell">
+        <canvas id="game" width="720" height="720" aria-label="貪吃蛇遊戲"></canvas>
+
+        <div class="overlay" id="overlay">
+          <div class="screen" id="startScreen">
+            <h2>🌈 可愛 Q版貪吃蛇</h2>
+            <p>先選一個喜歡的角色，再按開始。<br>蛇會胖胖地扭呀扭，食物也變得更大更清楚。</p>
+
+            <div class="chars" id="charList"></div>
+
+            <div class="start-actions">
+              <button class="btn primary" id="overlayStartBtn">開始冒險</button>
+              <button class="btn secondary" id="overlayMusicBtn">音樂：開</button>
+            </div>
+
+            <div class="footer-tip">
+              角色表情會眨眼、吃到食物會開心跳動。<br>
+              背景可切換，適合教學展示與 GitHub 上線。
+            </div>
+          </div>
+
+          <div class="screen" id="gameOverScreen" style="display:none">
+            <h2>💥 撞到了！</h2>
+            <p id="gameOverText">本次分數：0</p>
+            <div class="start-actions">
+              <button class="btn primary" id="playAgainBtn">再玩一次</button>
+              <button class="btn" id="backHomeBtn">回開場</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mobile-pad">
+        <div class="pad-grid">
+          <button class="mini-btn empty"></button>
+          <button class="mini-btn" data-dir="up">⬆️</button>
+          <button class="mini-btn empty"></button>
+
+          <button class="mini-btn" data-dir="left">⬅️</button>
+          <button class="mini-btn" data-dir="down">⬇️</button>
+          <button class="mini-btn" data-dir="right">➡️</button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+<script>
+(() => {
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const overlay = document.getElementById('overlay');
+  const startScreen = document.getElementById('startScreen');
+  const gameOverScreen = document.getElementById('gameOverScreen');
+  const scoreEl = document.getElementById('score');
+  const bestEl = document.getElementById('best');
+  const currentCharEl = document.getElementById('currentChar');
+  const musicBtn = document.getElementById('musicBtn');
+  const overlayMusicBtn = document.getElementById('overlayMusicBtn');
+  const themeBtn = document.getElementById('themeBtn');
+  const pauseBtn = document.getElementById('pauseBtn');
+
+  const SIZE = 720;
+  const GRID_COUNT = 24;
+  const CELL = SIZE / GRID_COUNT;
+  const FOOD_R = CELL * 0.42;
+  const THEMES = [
+    { name:'糖果夢境', bgTop:'#fff0f8', bgBottom:'#f7fcff', deco:['#ffd8e9','#d9f5ff','#fff3bf'] },
+    { name:'草地花園', bgTop:'#efffea', bgBottom:'#f8fff3', deco:['#d5f5cb','#fce2ff','#fff7c5'] },
+    { name:'晴空雲朵', bgTop:'#edf8ff', bgBottom:'#ffffff', deco:['#d7f0ff','#ffffff','#ffe3f0'] },
+    { name:'星空夜晚', bgTop:'#25305c', bgBottom:'#4d3d82', deco:['#a9b9ff','#ffe6a8','#ffc7eb'] }
+  ];
+  let themeIndex = 0;
+
+  const characters = [
+    { id:'rabbit', name:'小兔蛇', emoji:'🐰', head:'#ff7aa8', body:'#ffb4cd', accent:'#fff' },
+    { id:'cat', name:'小貓蛇', emoji:'🐱', head:'#ffb347', body:'#ffd28a', accent:'#fff' },
+    { id:'bear', name:'小熊蛇', emoji:'🐻', head:'#b5855d', body:'#d8b08f', accent:'#fff' },
+    { id:'dino', name:'小恐龍蛇', emoji:'🦖', head:'#66c97c', body:'#a8ebac', accent:'#fff' },
+  ];
+  let currentChar = characters[0];
+
+  let snake = [];
+  let dir = {x:1, y:0};
+  let nextDir = {x:1, y:0};
+  let food = {x:8, y:8, type:'apple'};
+  let score = 0;
+  let best = Number(localStorage.getItem('cuteSnakeBest') || 0);
+  let running = false;
+  let paused = false;
+  let lastTime = 0;
+  let stepMs = 150;
+  let blinkTimer = 0;
+  let blinkClosed = false;
+  let eatAnim = 0;
+  let particles = [];
+  let musicEnabled = true;
+
+  bestEl.textContent = best;
+
+  function renderCharacterCards(){
+    const charList = document.getElementById('charList');
+    charList.innerHTML = '';
+    characters.forEach(char => {
+      const btn = document.createElement('button');
+      btn.className = 'char-card' + (char.id === currentChar.id ? ' active' : '');
+      btn.innerHTML = `
+        <div class="char-emoji">${char.emoji}</div>
+        <div class="char-text">
+          <b>${char.name}</b>
+          <span>可愛角色主題</span>
+        </div>
+      `;
+      btn.addEventListener('click', () => {
+        currentChar = char;
+        currentCharEl.textContent = char.name;
+        renderCharacterCards();
+      });
+      charList.appendChild(btn);
+    });
+  }
+  renderCharacterCards();
+  currentCharEl.textContent = currentChar.name;
+
+  function resetGame(){
+    snake = [
+      {x:10, y:12},
+      {x:9, y:12},
+      {x:8, y:12}
+    ];
+    dir = {x:1, y:0};
+    nextDir = {x:1, y:0};
+    score = 0;
+    scoreEl.textContent = score;
+    stepMs = 150;
+    particles = [];
+    eatAnim = 0;
+    spawnFood();
+  }
+
+  function randomCell(){
+    return Math.floor(Math.random() * GRID_COUNT);
+  }
+
+  function spawnFood(){
+    let tries = 0;
+    do {
+      food = { x: randomCell(), y: randomCell(), type: Math.random() < 0.5 ? 'apple' : 'berry' };
+      tries++;
+    } while (snake.some(s => s.x === food.x && s.y === food.y) && tries < 1000);
+  }
+
+  function startGame(){
+    resetGame();
+    running = true;
+    paused = false;
+    startScreen.style.display = 'none';
+    gameOverScreen.style.display = 'none';
+    overlay.style.display = 'none';
+    initAudio();
+    if (musicEnabled) startMusic();
+    requestAnimationFrame(loop);
+  }
+
+  function goHome(){
+    running = false;
+    paused = false;
+    overlay.style.display = 'flex';
+    startScreen.style.display = 'block';
+    gameOverScreen.style.display = 'none';
+  }
+
+  function endGame(){
+    running = false;
+    overlay.style.display = 'flex';
+    startScreen.style.display = 'none';
+    gameOverScreen.style.display = 'block';
+    document.getElementById('gameOverText').textContent = `本次分數：${score}`;
+    if (score > best){
+      best = score;
+      localStorage.setItem('cuteSnakeBest', best);
+      bestEl.textContent = best;
+    }
+    playSfx('hit');
+  }
+
+  function setDirection(x, y){
+    if (x === -dir.x && y === -dir.y) return;
+    nextDir = {x, y};
+  }
+
+  document.addEventListener('keydown', e => {
+    const k = e.key.toLowerCase();
+    if (k === 'arrowup' || k === 'w') setDirection(0,-1);
+    if (k === 'arrowdown' || k === 's') setDirection(0,1);
+    if (k === 'arrowleft' || k === 'a') setDirection(-1,0);
+    if (k === 'arrowright' || k === 'd') setDirection(1,0);
+    if (k === ' '){
+      e.preventDefault();
+      togglePause();
+    }
+  });
+
+  document.querySelectorAll('.mini-btn[data-dir]').forEach(btn => {
+    const d = btn.dataset.dir;
+    const map = { up:[0,-1], down:[0,1], left:[-1,0], right:[1,0] };
+    const handler = () => setDirection(...map[d]);
+    btn.addEventListener('click', handler);
+    btn.addEventListener('touchstart', (e) => { e.preventDefault(); handler(); }, {passive:false});
+  });
+
+  function update(){
+    dir = nextDir;
+    const head = {x: snake[0].x + dir.x, y: snake[0].y + dir.y};
+
+    if (head.x < 0 || head.y < 0 || head.x >= GRID_COUNT || head.y >= GRID_COUNT){
+      endGame();
+      return;
+    }
+    if (snake.some(seg => seg.x === head.x && seg.y === head.y)){
+      endGame();
+      return;
+    }
+
+    snake.unshift(head);
+
+    if (head.x === food.x && head.y === food.y){
+      score += 10;
+      scoreEl.textContent = score;
+      eatAnim = 12;
+      spawnParticles(head.x, head.y);
+      playSfx('eat');
+      spawnFood();
+      stepMs = Math.max(85, stepMs - 1.5);
+      if (score > best){
+        best = score;
+        bestEl.textContent = best;
+      }
+    } else {
+      snake.pop();
+    }
+
+    if (eatAnim > 0) eatAnim--;
+    blinkTimer++;
+    if (blinkTimer > 22){
+      blinkClosed = !blinkClosed;
+      blinkTimer = 0;
+    }
+
+    particles.forEach(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.life--;
+      p.vy += 0.02;
+    });
+    particles = particles.filter(p => p.life > 0);
+  }
+
+  function spawnParticles(cx, cy){
+    for (let i = 0; i < 14; i++){
+      particles.push({
+        x: cx + 0.5,
+        y: cy + 0.5,
+        vx: (Math.random() - 0.5) * 0.18,
+        vy: (Math.random() - 0.5) * 0.18 - 0.03,
+        life: 22 + Math.random() * 10,
+        r: Math.random() * 0.12 + 0.06
+      });
+    }
+  }
+
+  function drawBackground(){
+    const theme = THEMES[themeIndex];
+    const g = ctx.createLinearGradient(0,0,0,SIZE);
+    g.addColorStop(0, theme.bgTop);
+    g.addColorStop(1, theme.bgBottom);
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,SIZE,SIZE);
+
+    for (let i = 0; i < 10; i++){
+      const x = (i * 79 + 37) % SIZE;
+      const y = (i * 97 + 55) % SIZE;
+      ctx.fillStyle = theme.deco[i % theme.deco.length] + 'aa';
+      ctx.beginPath();
+      ctx.arc(x, y, 24 + (i%3)*10, 0, Math.PI*2);
+      ctx.fill();
+    }
+
+    if (theme.name === '星空夜晚'){
+      for (let i = 0; i < 40; i++){
+        ctx.fillStyle = 'rgba(255,255,255,.8)';
+        ctx.fillRect((i*53)%SIZE, (i*97)%SIZE, 2, 2);
+      }
+    }
+
+    ctx.strokeStyle = 'rgba(255,255,255,.28)';
+    for (let i = 1; i < GRID_COUNT; i++){
+      const p = i * CELL;
+      ctx.beginPath();
+      ctx.moveTo(p, 0); ctx.lineTo(p, SIZE);
+      ctx.moveTo(0, p); ctx.lineTo(SIZE, p);
+      ctx.stroke();
+    }
+  }
+
+  function roundRect(x,y,w,h,r){
+    ctx.beginPath();
+    ctx.moveTo(x+r,y);
+    ctx.arcTo(x+w,y,x+w,y+h,r);
+    ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r);
+    ctx.arcTo(x,y,x+w,y,r);
+    ctx.closePath();
+  }
+
+  function drawSnake(){
+    snake.forEach((seg, i) => {
+      const x = seg.x * CELL;
+      const y = seg.y * CELL;
+      const isHead = i === 0;
+      const squash = isHead && eatAnim > 0 ? 1 + eatAnim * 0.018 : 1;
+      const w = CELL * 0.96;
+      const h = CELL * 0.96 * squash;
+      const ox = x + (CELL - w)/2;
+      const oy = y + (CELL - h)/2;
+
+      ctx.save();
+      ctx.fillStyle = isHead ? currentChar.head : currentChar.body;
+      roundRect(ox, oy, w, h, CELL*0.34);
+      ctx.fill();
+
+      ctx.fillStyle = 'rgba(255,255,255,.35)';
+      roundRect(ox + w*0.12, oy + h*0.1, w*0.45, h*0.22, CELL*0.12);
+      ctx.fill();
+
+      if (isHead){
+        // 耳朵 / 頭部裝飾
+        if (currentChar.id === 'rabbit'){
+          ctx.fillStyle = currentChar.head;
+          roundRect(ox + w*0.1, oy - h*0.24, w*0.17, h*0.32, CELL*0.12); ctx.fill();
+          roundRect(ox + w*0.73, oy - h*0.24, w*0.17, h*0.32, CELL*0.12); ctx.fill();
+          ctx.fillStyle = '#ffd6e8';
+          roundRect(ox + w*0.145, oy - h*0.18, w*0.08, h*0.2, CELL*0.09); ctx.fill();
+          roundRect(ox + w*0.775, oy - h*0.18, w*0.08, h*0.2, CELL*0.09); ctx.fill();
+        }
+        if (currentChar.id === 'cat'){
+          ctx.fillStyle = currentChar.head;
+          ctx.beginPath();
+          ctx.moveTo(ox+w*0.18, oy+h*0.1); ctx.lineTo(ox+w*0.3, oy-h*0.18); ctx.lineTo(ox+w*0.42, oy+h*0.1); ctx.fill();
+          ctx.beginPath();
+          ctx.moveTo(ox+w*0.58, oy+h*0.1); ctx.lineTo(ox+w*0.7, oy-h*0.18); ctx.lineTo(ox+w*0.82, oy+h*0.1); ctx.fill();
+        }
+        if (currentChar.id === 'bear'){
+          ctx.fillStyle = currentChar.head;
+          ctx.beginPath(); ctx.arc(ox+w*0.22, oy+h*0.08, w*0.12, 0, Math.PI*2); ctx.fill();
+          ctx.beginPath(); ctx.arc(ox+w*0.78, oy+h*0.08, w*0.12, 0, Math.PI*2); ctx.fill();
+        }
+        if (currentChar.id === 'dino'){
+          ctx.fillStyle = '#4bb964';
+          for (let k = 0; k < 4; k++){
+            ctx.beginPath();
+            ctx.moveTo(ox+w*(0.18+k*0.17), oy+h*0.04);
+            ctx.lineTo(ox+w*(0.27+k*0.17), oy-h*0.16);
+            ctx.lineTo(ox+w*(0.36+k*0.17), oy+h*0.04);
+            ctx.fill();
+          }
+        }
+
+        // 臉
+        const eyeY = oy + h*0.42;
+        ctx.strokeStyle = '#3f2d3a';
+        ctx.lineWidth = 3;
+        if (blinkClosed){
+          ctx.beginPath();
+          ctx.moveTo(ox+w*0.3, eyeY); ctx.lineTo(ox+w*0.4, eyeY);
+          ctx.moveTo(ox+w*0.6, eyeY); ctx.lineTo(ox+w*0.7, eyeY);
+          ctx.stroke();
+        } else {
+          ctx.fillStyle = '#2c2330';
+          ctx.beginPath(); ctx.arc(ox+w*0.35, eyeY, 4, 0, Math.PI*2); ctx.fill();
+          ctx.beginPath(); ctx.arc(ox+w*0.65, eyeY, 4, 0, Math.PI*2); ctx.fill();
+          ctx.fillStyle = 'rgba(255,255,255,.85)';
+          ctx.beginPath(); ctx.arc(ox+w*0.33, eyeY-1.5, 1.5, 0, Math.PI*2); ctx.fill();
+          ctx.beginPath(); ctx.arc(ox+w*0.63, eyeY-1.5, 1.5, 0, Math.PI*2); ctx.fill();
+        }
+
+        ctx.fillStyle = '#ff8cb0';
+        ctx.beginPath();
+        ctx.arc(ox+w*0.5, oy+h*0.58, 4.5, 0, Math.PI*2);
+        ctx.fill();
+
+        ctx.strokeStyle = '#7c5264';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        if (eatAnim > 0){
+          ctx.arc(ox+w*0.5, oy+h*0.68, 8, 0, Math.PI, false);
+        } else {
+          ctx.arc(ox+w*0.5, oy+h*0.66, 6, 0, Math.PI, false);
+        }
+        ctx.stroke();
+
+        // 吐舌頭小動畫
+        if (eatAnim > 0){
+          ctx.strokeStyle = '#ff5f8d';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(ox+w*0.5, oy+h*0.7);
+          ctx.lineTo(ox+w*0.5, oy+h*0.84);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+    });
+  }
+
+  function drawFood(){
+    const cx = food.x * CELL + CELL/2;
+    const cy = food.y * CELL + CELL/2;
+
+    // 食物本體
+    ctx.save();
+    if (food.type === 'apple'){
+      ctx.fillStyle = '#ff5e7d';
+      ctx.beginPath();
+      ctx.arc(cx, cy, FOOD_R, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#77c96f';
+      ctx.beginPath();
+      ctx.ellipse(cx + FOOD_R*0.28, cy - FOOD_R*0.88, FOOD_R*0.34, FOOD_R*0.18, -0.5, 0, Math.PI*2);
+      ctx.fill();
+      ctx.strokeStyle = '#7b4a32';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - FOOD_R*0.5);
+      ctx.lineTo(cx, cy - FOOD_R*1.0);
+      ctx.stroke();
+    } else {
+      ctx.fillStyle = '#985cff';
+      ctx.beginPath();
+      ctx.arc(cx - FOOD_R*0.24, cy, FOOD_R*0.72, 0, Math.PI * 2);
+      ctx.arc(cx + FOOD_R*0.24, cy, FOOD_R*0.72, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#4db86c';
+      ctx.beginPath();
+      ctx.ellipse(cx, cy - FOOD_R*0.95, FOOD_R*0.3, FOOD_R*0.18, 0, 0, Math.PI*2);
+      ctx.fill();
+    }
+
+    // 高光
+    ctx.fillStyle = 'rgba(255,255,255,.78)';
+    ctx.beginPath();
+    ctx.arc(cx - FOOD_R*0.32, cy - FOOD_R*0.32, FOOD_R*0.2, 0, Math.PI*2);
+    ctx.fill();
+
+    // 表情
+    ctx.fillStyle = '#2c2330';
+    ctx.beginPath();
+    ctx.arc(cx - FOOD_R*0.26, cy - FOOD_R*0.05, 2.6, 0, Math.PI*2);
+    ctx.arc(cx + FOOD_R*0.26, cy - FOOD_R*0.05, 2.6, 0, Math.PI*2);
+    ctx.fill();
+    ctx.strokeStyle = '#5c4350';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy + FOOD_R*0.12, FOOD_R*0.22, 0, Math.PI);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawParticles(){
+    particles.forEach(p => {
+      ctx.fillStyle = 'rgba(255,255,255,' + Math.max(0, p.life/30) + ')';
+      ctx.beginPath();
+      ctx.arc(p.x*CELL, p.y*CELL, p.r*CELL, 0, Math.PI*2);
+      ctx.fill();
+    });
+  }
+
+  function drawPaused(){
+    if (!paused) return;
+    ctx.fillStyle = 'rgba(255,255,255,.55)';
+    ctx.fillRect(0,0,SIZE,SIZE);
+    ctx.fillStyle = '#5b4658';
+    ctx.font = 'bold 42px Microsoft JhengHei';
+    ctx.textAlign = 'center';
+    ctx.fillText('暫停中', SIZE/2, SIZE/2);
+  }
+
+  function draw(){
+    drawBackground();
+    drawFood();
+    drawSnake();
+    drawParticles();
+    drawPaused();
+  }
+
+  function loop(ts){
+    if (!running) return;
+    draw();
+    if (!paused){
+      if (!lastTime) lastTime = ts;
+      const delta = ts - lastTime;
+      if (delta >= stepMs){
+        update();
+        lastTime = ts;
+      }
+    }
+    requestAnimationFrame(loop);
+  }
+
+  function cycleTheme(){
+    themeIndex = (themeIndex + 1) % THEMES.length;
+    themeBtn.textContent = '背景：' + THEMES[themeIndex].name;
+  }
+
+  function togglePause(){
+    if (!running) return;
+    paused = !paused;
+  }
+
+  // ===== Audio =====
+  let audioCtx = null;
+  let musicInterval = null;
+  function initAudio(){
+    if (!audioCtx){
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  }
+
+  function beep(freq, dur, type='sine', gainValue=0.03, delay=0){
+    if (!audioCtx || !musicEnabled) return;
+    const now = audioCtx.currentTime + delay;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, now);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(gainValue, now + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(now);
+    osc.stop(now + dur + 0.02);
+  }
+
+  function playSfx(type){
+    if (!audioCtx || !musicEnabled) return;
+    if (type === 'eat'){
+      beep(880, 0.08, 'triangle', 0.04, 0);
+      beep(1175, 0.08, 'triangle', 0.03, 0.05);
+    } else if (type === 'hit'){
+      beep(220, 0.18, 'sawtooth', 0.035, 0);
+      beep(140, 0.22, 'sawtooth', 0.03, 0.05);
+    }
+  }
+
+  function startMusic(){
+    if (!audioCtx || !musicEnabled) return;
+    stopMusic();
+    const melody = [523,659,784,659,587,659,784,988];
+    let i = 0;
+    musicInterval = setInterval(() => {
+      if (!running && startScreen.style.display === 'none') return;
+      const base = melody[i % melody.length];
+      beep(base, 0.16, 'triangle', 0.016, 0);
+      beep(base/2, 0.18, 'sine', 0.008, 0);
+      i++;
+    }, 260);
+  }
+
+  function stopMusic(){
+    if (musicInterval){
+      clearInterval(musicInterval);
+      musicInterval = null;
+    }
+  }
+
+  function toggleMusic(){
+    musicEnabled = !musicEnabled;
+    musicBtn.textContent = '音樂：' + (musicEnabled ? '開' : '關');
+    overlayMusicBtn.textContent = '音樂：' + (musicEnabled ? '開' : '關');
+    if (!musicEnabled){
+      stopMusic();
+    } else {
+      initAudio();
+      startMusic();
+    }
+  }
+
+  // Buttons
+  document.getElementById('startBtn').addEventListener('click', startGame);
+  document.getElementById('overlayStartBtn').addEventListener('click', startGame);
+  document.getElementById('playAgainBtn').addEventListener('click', startGame);
+  document.getElementById('backHomeBtn').addEventListener('click', goHome);
+  document.getElementById('restartBtn').addEventListener('click', startGame);
+  musicBtn.addEventListener('click', toggleMusic);
+  overlayMusicBtn.addEventListener('click', toggleMusic);
+  themeBtn.addEventListener('click', cycleTheme);
+  pauseBtn.addEventListener('click', togglePause);
+
+  draw();
+})();
+</script>
+</body>
+</html>
